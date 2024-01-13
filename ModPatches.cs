@@ -55,8 +55,20 @@ namespace BBSchoolMaze.Patches
 				// Setups the maze manually to call the Generate() method
 				AccessTools.Field(typeof(MazeGenerator), "cRng").SetValue(maze, new System.Random(i.controlledRNG.Next()));
 
-				var method = (IEnumerator)AccessTools.Method("MazeGenerator:Generate", [typeof(RoomController)]).Invoke(maze, [i.Ec.mainHall]); // Invokes the method, now just manually wait
-				while (method.MoveNext()) { } // Manually move next the method
+				for (int x = 0; x < i.Ec.levelSize.x; x++) // Basically fill every single spot with a maze tile so the level doesn't break in a case a rare occurrance happen
+				{
+					for (int z = 0; z < i.Ec.levelSize.z; z++)
+					{
+						if (i.Ec.tiles[x, z] != null) continue;
+						i.Ec.mainHall.position = new(x, z);
+
+						
+
+						var method = (IEnumerator)AccessTools.Method("MazeGenerator:Generate", [typeof(RoomController)]).Invoke(maze, [i.Ec.mainHall]); // Invokes the method, now just manually wait
+						while (method.MoveNext()) { } // Manually move next the method
+						
+					}
+				}
 
 				foreach (var door in tripEntrances)
 				{
@@ -125,6 +137,29 @@ namespace BBSchoolMaze.Patches
 			MazeChaos.tripEntrances.Add(pos, dir); // Register this entrance to fix a later bug
 		
 		
+	}
+
+	[HarmonyPatch(typeof(PlayerMovement), "Start")]
+	internal class GottaGoFast
+	{
+		[HarmonyPostfix]
+		private static void GoFastFunc(ref float ___runSpeed, ref float ___walkSpeed, ref float ___staminaDrop)
+		{
+			___runSpeed *= 3.2f;
+			___walkSpeed *= 3.2f;
+			___staminaDrop /= 1.5f;
+		}
+	}
+
+	[HarmonyPatch(typeof(EnvironmentController), "Start")]
+	internal class NPCFast
+	{
+		[HarmonyPostfix]
+		private static void GottaGoFastNPCs(EnvironmentController __instance) =>
+			__instance.AddTimeScale(mod);
+		
+
+		readonly static TimeScaleModifier mod = new() { environmentTimeScale = 1f, npcTimeScale = 2.5f };
 	}
 
 

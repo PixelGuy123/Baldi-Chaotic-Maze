@@ -15,6 +15,13 @@ namespace BBSchoolMaze.Plugin
 			{
 				ld.timeBonusLimit *= 2;
 				ld.timeBonusVal *= 2;
+				ld.items.DoIf(x => x.selection.itemType == Items.PortalPoster, (x) => {
+					x.weight *= 12;
+					x.selection.cost = 10;
+					});
+				ld.itemChance *= 3;
+				ld.maxFacultyRooms *= 2;
+				ld.minFacultyRooms *= 2;
 			});
 
 			Harmony harmony = new(ModInfo.GUID);
