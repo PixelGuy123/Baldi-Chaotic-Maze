@@ -5,6 +5,7 @@ using MTM101BaldAPI.Registers;
 namespace BBSchoolMaze.Plugin
 {
 	[BepInPlugin(ModInfo.GUID, ModInfo.Name, ModInfo.Version)]
+	[BepInDependency("pixelguy.pixelmodding.baldiplus.bbgenfixes", BepInDependency.DependencyFlags.HardDependency)]
 
 	public class BasePlugin : BaseUnityPlugin
 	{
@@ -34,7 +35,7 @@ namespace BBSchoolMaze.Plugin
 	{
 		internal const string GUID = "pixelguy.pixelmodding.baldiplus.bbcrazymaze";
 		internal const string Name = "BB+ Crazy School Maze";
-		internal const string Version = "1.0.0";
+		internal const string Version = "1.0.0.1";
 	}
 
 
