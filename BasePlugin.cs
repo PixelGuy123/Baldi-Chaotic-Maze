@@ -5,7 +5,6 @@ using MTM101BaldAPI.Registers;
 namespace BBSchoolMaze.Plugin
 {
 	[BepInPlugin(ModInfo.GUID, ModInfo.Name, ModInfo.Version)]
-	[BepInDependency("pixelguy.pixelmodding.baldiplus.bbgenfixes", BepInDependency.DependencyFlags.HardDependency)] // Requires elevator fix
 
 	public class BasePlugin : BaseUnityPlugin
 	{

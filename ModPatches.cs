@@ -26,6 +26,12 @@ namespace BBSchoolMaze.Patches
 		private static IEnumerable<CodeInstruction> EstablishChaos(IEnumerable<CodeInstruction> instructions)
 		{
 			var match = new CodeMatcher(instructions)
+			.MatchForward(true,
+				new CodeMatch(OpCodes.Ldloc_2), // Straight copypaste from BBGeneratorFixes
+				new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(LevelBuilder), "ec")),
+				new CodeMatch(OpCodes.Ldc_I4_S, name: "16")) // WHY DOES IT HAVE TO BE A STRING?? I CAN'T USE 16 AS OPERAND
+			.SetInstruction(new(OpCodes.Ldc_I4_0)) // Set to 0 because it is for some reason 16
+
 			.MatchForward(false,
 				new CodeMatch(OpCodes.Ldnull),
 				new CodeMatch(OpCodes.Ldc_I4_1),
