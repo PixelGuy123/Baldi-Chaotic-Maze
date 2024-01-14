@@ -26,11 +26,6 @@ namespace BBSchoolMaze.Patches
 		private static IEnumerable<CodeInstruction> EstablishChaos(IEnumerable<CodeInstruction> instructions)
 		{
 			var match = new CodeMatcher(instructions)
-			.MatchForward(true,
-				new CodeMatch(OpCodes.Ldloc_2), // Straight copypaste from BBGeneratorFixes
-				new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(LevelBuilder), "ec")),
-				new CodeMatch(OpCodes.Ldc_I4_S, name: "16")) // WHY DOES IT HAVE TO BE A STRING?? I CAN'T USE 16 AS OPERAND
-			.SetInstruction(new(OpCodes.Ldc_I4_0)) // Set to 0 because it is for some reason 16
 
 			.MatchForward(false,
 				new CodeMatch(OpCodes.Ldnull),
@@ -157,22 +152,12 @@ namespace BBSchoolMaze.Patches
 		}
 	}
 
-	[HarmonyPatch(typeof(EnvironmentController))]
-	internal class NPCFastAndFix
+	[HarmonyPatch(typeof(EnvironmentController), "Start")]
+	internal class NPCFast
 	{
-		[HarmonyPatch("Start")]
 		[HarmonyPostfix]
 		private static void GottaGoFastNPCs(EnvironmentController __instance) =>
 			__instance.AddTimeScale(mod);
-
-		[HarmonyPatch("Awake")]
-		[HarmonyPrefix]
-		private static void FixConstBin(ref TileController[] ___tileControllerPre) // For some reason, 16th tile has a constbin of 0, Imma fixing that
-		{
-			if (___tileControllerPre.Length > 15) // May have 16th tile
-				AccessTools.Field(typeof(TileController), "constBin").SetValue(___tileControllerPre[16], 16);
-
-		}
 
 
 		readonly static TimeScaleModifier mod = new() { environmentTimeScale = 1f, npcTimeScale = 2.5f };
