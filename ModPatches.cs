@@ -151,13 +151,23 @@ namespace BBSchoolMaze.Patches
 		}
 	}
 
-	[HarmonyPatch(typeof(EnvironmentController), "Start")]
-	internal class NPCFast
+	[HarmonyPatch(typeof(EnvironmentController))]
+	internal class NPCFastAndFix
 	{
+		[HarmonyPatch("Start")]
 		[HarmonyPostfix]
 		private static void GottaGoFastNPCs(EnvironmentController __instance) =>
 			__instance.AddTimeScale(mod);
-		
+
+		[HarmonyPatch("Awake")]
+		[HarmonyPrefix]
+		private static void FixConstBin(ref TileController[] ___tileControllerPre) // For some reason, 16th tile has a constbin of 0, Imma fixing that
+		{
+			if (___tileControllerPre.Length > 15) // May have 16th tile
+				AccessTools.Field(typeof(TileController), "constBin").SetValue(___tileControllerPre[16], 16);
+
+		}
+
 
 		readonly static TimeScaleModifier mod = new() { environmentTimeScale = 1f, npcTimeScale = 2.5f };
 	}
