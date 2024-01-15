@@ -152,12 +152,23 @@ namespace BBSchoolMaze.Patches
 		}
 	}
 
-	[HarmonyPatch(typeof(EnvironmentController), "Start")]
-	internal class NPCFast
+	[HarmonyPatch(typeof(EnvironmentController))]
+	internal class NPCFast_AndBaldiIcon
 	{
+		[HarmonyPatch("Start")]
 		[HarmonyPostfix]
 		private static void GottaGoFastNPCs(EnvironmentController __instance) =>
 			__instance.AddTimeScale(mod);
+
+		[HarmonyPatch("SpawnNPC")]
+		[HarmonyPostfix]
+		private static void AddBaldiIcon(EnvironmentController __instance, List<NPC> ___npcs)
+		{
+			NPC npc = ___npcs[___npcs.Count - 1];
+			if (npc.Character == Character.Baldi)
+				__instance.map.AddArrow(npc.transform, Color.green); // Baldo has an icon now >:D
+			
+		}
 
 
 		readonly static TimeScaleModifier mod = new() { environmentTimeScale = 1f, npcTimeScale = 2.5f };
