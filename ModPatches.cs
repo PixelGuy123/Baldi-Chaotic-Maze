@@ -1,6 +1,6 @@
 ﻿using HarmonyLib;
-using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Reflection.Emit;
 using TMPro;
 using UnityEngine;
@@ -9,7 +9,7 @@ namespace BBSchoolMaze.Patches
 {
 
 	[HarmonyPatch(typeof(LevelGenerator))]
-	internal class MazeChaos
+	public class MazeChaos
 	{
 
 		[HarmonyPatch("StartGenerate")]
@@ -28,57 +28,67 @@ namespace BBSchoolMaze.Patches
 			var match = new CodeMatcher(instructions)
 
 			.MatchForward(false,
-				new CodeMatch(OpCodes.Ldnull),
-				new CodeMatch(OpCodes.Ldc_I4_1),
+				new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(RoomController), "forcedDoorPositions")),
+				new CodeMatch(OpCodes.Ldarg_0),
+				new CodeMatch(OpCodes.Ldfld, name: "<i>5__50"),
+				new CodeMatch(OpCodes.Callvirt, AccessTools.PropertyGetter(typeof(List<IntVector2>), "Item")),
+				new CodeMatch(OpCodes.Ldarg_0),
+				new CodeMatch(OpCodes.Ldfld, name: "<room>5__74"),
 				new CodeMatch(OpCodes.Ldc_I4_0),
-				new CodeMatch(OpCodes.Call, AccessTools.Method(typeof(LevelBuilder), "AddRandomDoor")) // Lesson learned: one code match doesn't work, you have to be super specific
+				new CodeMatch(OpCodes.Ldc_I4_1),
+				new CodeMatch(OpCodes.Ldloca_S, name: "V_87"),
+				new CodeMatch(OpCodes.Ldloca_S, name: "V_88"),
+				new CodeMatch(CodeInstruction.Call("LevelBuilder:BuildDoorIfPossible", [typeof(IntVector2), typeof(RoomController), typeof(bool), typeof(bool), typeof(RoomController).MakeByRefType(), typeof(IntVector2).MakeByRefType()]))
 				); // Get to this method
 
-			match.Advance(-7);
+			match.Advance(-20); // Goes to right spot
 			match.InsertAndAdvance(
 			Transpilers.EmitDelegate(() =>
 			{
 				foreach (var tile in i.Ec.mainHall.GetNewTileList())
 				{
-					if (!tile.keepBin)
-					{
-						i.Ec.DestroyTile(tile.position, tile);
-						i.Ec.mainHall.RemoveTile(tile);
-					}
+					if (!tile.offLimits)
+						i.Ec.DestroyCell(tile);
+					
 				}
+				
 
-				var maze = new GameObject("MazeGen").AddComponent<MazeGenerator>();
+				var rng = new System.Random(i.controlledRNG.Next());
 				i.Ec.mainHall.size = i.levelSize;
 				i.Ec.mainHall.maxSize = i.levelSize;
-
-				AccessTools.Field(typeof(MazeGenerator), "patchesToSpawn").SetValue(maze, 0); // No "library" centers
-
-				// Setups the maze manually to call the Generate() method
-				AccessTools.Field(typeof(MazeGenerator), "cRng").SetValue(maze, new System.Random(i.controlledRNG.Next()));
 
 				for (int x = 0; x < i.Ec.levelSize.x; x++) // Basically fill every single spot with a maze tile so the level doesn't break in a case a rare occurrance happen
 				{
 					for (int z = 0; z < i.Ec.levelSize.z; z++)
 					{
-						if (i.Ec.tiles[x, z] != null) continue;
+						if (!i.Ec.CellFromPosition(x, z).Null) continue;
 						i.Ec.mainHall.position = new(x, z);
 
-						
-
-						var method = (IEnumerator)AccessTools.Method("MazeGenerator:Generate", [typeof(RoomController)]).Invoke(maze, [i.Ec.mainHall]); // Invokes the method, now just manually wait
-						while (method.MoveNext()) { } // Manually move next the method
-						
+						MazeGenerator.Generate(i.Ec.mainHall, rng);
 					}
+
 				}
+
+				i.Ec.mainHall.position = new();
 
 				foreach (var door in tripEntrances)
 				{
-					var tile = i.Ec.TileFromPos(door.Key);
+					var tile = i.Ec.CellFromPosition(door.Key);
 					if (tile != null)
 					{
-						tile.doorHere = true;
-						tile.doorDirs.Add(door.Value);
-						tile.doorDirsSpace.Add(door.Value); // Fix the issue with blocked off entrances
+						foreach (var dir in door.Value)
+						{
+							i.Ec.ConnectCells(door.Key, dir);
+							tile = i.Ec.CellFromPosition(door.Key);
+							tile.doorHere = true;
+							tile.doorDirs.Add(dir);
+							tile.doorDirsSpace.Add(dir); // Fix the issue with blocked off entrances
+
+							tile = i.Ec.CellFromPosition(door.Key + dir.ToIntVector2());
+							tile.doorHere = true;
+							tile.doorDirs.Add(dir.GetOpposite());
+							tile.doorDirsSpace.Add(dir.GetOpposite()); // Fix the issue with blocked off entrances
+						}
 					}
 				}
 
@@ -90,7 +100,7 @@ namespace BBSchoolMaze.Patches
 
 		static LevelGenerator i;
 
-		internal static Dictionary<IntVector2, Direction> tripEntrances = [];
+		internal static Dictionary<IntVector2, Direction[]> tripEntrances = [];
 	}
 
 
@@ -117,6 +127,7 @@ namespace BBSchoolMaze.Patches
 	[HarmonyPatch(typeof(LevelBuilder))]
 	internal class MakeElevatorVisible
 	{
+		/*  <-- Obsolete (as this method doesn't even exist anymore), the elevator has an indication now.
 		[HarmonyPatch("Start")]
 		[HarmonyPrefix]
 		private static void ChangeConstBins(ref MapTile[] ___mapTiles) =>
@@ -126,18 +137,39 @@ namespace BBSchoolMaze.Patches
 		[HarmonyPostfix]
 		private static void FixElevatorColor(ref IntVector2 position, EnvironmentController ___ec, ref Map ___map) // Basically make elevators cyan
 		{
-			TileController tileController = ___ec.tiles[position.x, position.z];
-			if (tileController != null && tileController.ConstBin == 16)
+			Cell tileController = ___ec.CellFromPosition(position);
+			if (!tileController.Null && tileController.ConstBin == 16)
 				___map.tiles[position.x, position.z].SpriteRenderer.color = Color.cyan;
 			
 		}
+		*/
 
 		[HarmonyPatch("CreateTripEntrance")]
 		[HarmonyPostfix]
-		private static void RegisterThisEntrance(IntVector2 pos, Direction dir) =>
-			MazeChaos.tripEntrances.Add(pos, dir); // Register this entrance to fix a later bug
-		
-		
+		private static void RegisterThisEntrance(IntVector2 pos, ref Direction dir) =>
+			MazeChaos.tripEntrances.Add(pos, [dir.GetOpposite()]); // Register this entrance to fix a later bug
+
+		[HarmonyPatch("CreateElevator")]
+		[HarmonyPostfix]
+		private static void RegisterThisElevator(IntVector2 pos, ref Direction dir) =>
+			MazeChaos.tripEntrances.Add(pos, [dir.GetOpposite(), dir.PerpendicularList()[0], dir.PerpendicularList()[1], dir]); // Register this entrance to fix a later bug
+
+
+
+	}
+
+	[HarmonyPatch(typeof(Elevator), "Close")]
+	internal class DisableGateAnimation
+	{
+		private static bool Prefix(ref bool ___open, ref MapIcon ___mapIcon, Sprite ___lockedIconSprite, ref MeshCollider ___gateCollider)
+		{
+			___open = false;
+			___mapIcon.spriteRenderer.sprite = ___lockedIconSprite;
+			___mapIcon.spriteRenderer.color = Color.red;
+			___gateCollider.enabled = false;
+
+			return false;
+		}
 	}
 
 	[HarmonyPatch(typeof(PlayerMovement), "Start")]
@@ -168,6 +200,15 @@ namespace BBSchoolMaze.Patches
 			if (npc.Character == Character.Baldi)
 				__instance.map.AddArrow(npc.transform, Color.green); // Baldo has an icon now >:D
 			
+		}
+
+		[HarmonyPatch("SetupDoor")]
+		[HarmonyPrefix]
+		private static void FixDoorWallCover(EnvironmentController __instance, ref Cell tile, Direction dir)
+		{
+			var pos = tile.position;
+			__instance.ConnectCells(pos, dir);
+			tile = __instance.CellFromPosition(pos);
 		}
 
 

@@ -5,13 +5,13 @@ using MTM101BaldAPI.Registers;
 namespace BBSchoolMaze.Plugin
 {
 	[BepInPlugin(ModInfo.GUID, ModInfo.Name, ModInfo.Version)]
-	[BepInDependency("pixelguy.pixelmodding.baldiplus.bbgenfixes", BepInDependency.DependencyFlags.HardDependency)]
+	// 	[BepInDependency("pixelguy.pixelmodding.baldiplus.bbgenfixes", BepInDependency.DependencyFlags.HardDependency)] <-- obsolete
 
 	public class BasePlugin : BaseUnityPlugin
 	{
 		void Awake()
 		{
-			GeneratorManagement.Register(this, GenerationModType.Override, (_, _2, ld) =>
+			GeneratorManagement.Register(this, GenerationModType.Base, (_, _2, ld) =>
 			{
 				ld.timeBonusLimit *= 2;
 				ld.timeBonusVal *= 2;
@@ -19,9 +19,12 @@ namespace BBSchoolMaze.Plugin
 					x.weight *= 12;
 					x.selection.cost = 10;
 					});
-				ld.itemChance *= 3;
-				ld.maxFacultyRooms *= 2;
-				ld.minFacultyRooms *= 2;
+				ld.maxFacultyRooms *= 4;
+				ld.minFacultyRooms *= 4;
+				ld.potentialClassRooms.Do(x => x.selection.itemSpawnPoints.ForEach(z => z.chance *= 20f));
+				ld.potentialFacultyRooms.Do(x => x.selection.itemSpawnPoints.ForEach(z => z.chance *= 20f));
+				ld.potentialOffices.Do(x => x.selection.itemSpawnPoints.ForEach(z => z.chance *= 20f));
+				ld.potentialExtraRooms.Do(x => x.selection.itemSpawnPoints.ForEach(z => z.chance *= 20f));
 			});
 
 			Harmony harmony = new(ModInfo.GUID);
@@ -35,7 +38,7 @@ namespace BBSchoolMaze.Plugin
 	{
 		internal const string GUID = "pixelguy.pixelmodding.baldiplus.bbcrazymaze";
 		internal const string Name = "BB+ Crazy School Maze";
-		internal const string Version = "1.0.1";
+		internal const string Version = "1.0.2";
 	}
 
 
