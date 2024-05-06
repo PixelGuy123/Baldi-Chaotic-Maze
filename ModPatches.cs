@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using MTM101BaldAPI.PlusExtensions;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -176,11 +177,11 @@ namespace BBSchoolMaze.Patches
 	internal class GottaGoFast
 	{
 		[HarmonyPostfix]
-		private static void GoFastFunc(ref float ___runSpeed, ref float ___walkSpeed, ref float ___staminaDrop)
+		private static void GoFastFunc(PlayerMovement __instance)
 		{
-			___runSpeed *= 3.2f;
-			___walkSpeed *= 3.2f;
-			___staminaDrop /= 1.5f;
+			__instance.pm.GetMovementStatModifier().AddModifier("runSpeed", new(3.2f));
+			__instance.pm.GetMovementStatModifier().AddModifier("walkSpeed", new(3.2f));
+			__instance.pm.GetMovementStatModifier().AddModifier("staminaDrop", new(2/3));
 		}
 	}
 
