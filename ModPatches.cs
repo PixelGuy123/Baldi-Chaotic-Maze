@@ -145,11 +145,6 @@ namespace BBSchoolMaze.Patches
 		}
 		*/
 
-		[HarmonyPatch("CreateTripEntrance")]
-		[HarmonyPostfix]
-		private static void RegisterThisEntrance(IntVector2 pos, ref Direction dir) =>
-			MazeChaos.tripEntrances.Add(pos, [dir.GetOpposite()]); // Register this entrance to fix a later bug
-
 		[HarmonyPatch("CreateElevator")]
 		[HarmonyPostfix]
 		private static void RegisterThisElevator(IntVector2 pos, ref Direction dir) =>
