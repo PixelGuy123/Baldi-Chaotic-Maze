@@ -1,7 +1,7 @@
-﻿using HarmonyLib;
+﻿using BBSchoolMaze.Plugin;
+using HarmonyLib;
 using MTM101BaldAPI.PlusExtensions;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Reflection.Emit;
 using TMPro;
 using UnityEngine;
@@ -20,7 +20,7 @@ namespace BBSchoolMaze.Patches
 			tripEntrances.Clear();
 			i = __instance;
 		}
-		
+
 
 		[HarmonyPatch("Generate", MethodType.Enumerator)]
 		[HarmonyTranspiler]
@@ -50,9 +50,9 @@ namespace BBSchoolMaze.Patches
 				{
 					if (!tile.offLimits)
 						i.Ec.DestroyCell(tile);
-					
+
 				}
-				
+
 
 				var rng = new System.Random(i.controlledRNG.Next());
 				i.Ec.mainHall.size = i.levelSize;
@@ -62,7 +62,7 @@ namespace BBSchoolMaze.Patches
 				{
 					for (int z = 0; z < i.Ec.levelSize.z; z++)
 					{
-						if (!i.Ec.CellFromPosition(x, z).Null) continue;
+						if (!i.Ec.ContainsCoordinates(x, z) || !i.Ec.CellFromPosition(x, z).Null) continue;
 						i.Ec.mainHall.position = new(x, z);
 
 						MazeGenerator.Generate(i.Ec.mainHall, rng);
@@ -108,9 +108,12 @@ namespace BBSchoolMaze.Patches
 	[HarmonyPatch(typeof(BaseGameManager), "Initialize")]
 	internal class NocheatJustfullmap
 	{
-		private static void Prefix(BaseGameManager __instance) =>
-			__instance.CompleteMapOnReady();
-		
+		private static void Prefix(BaseGameManager __instance)
+		{
+			if (BasePlugin.chaosModeConfig.Value == BasePlugin.ChaosMode.MazeChaos)
+				__instance.CompleteMapOnReady();
+		}
+
 	}
 
 	[HarmonyPatch(typeof(StoreScreen), "Start")]
@@ -118,6 +121,9 @@ namespace BBSchoolMaze.Patches
 	{
 		private static void Postfix(ref TMP_Text ___mapPriceText, ref bool[] ___itemPurchased, ref GameObject ___mapHotSpot)
 		{
+			if (BasePlugin.chaosModeConfig.Value != BasePlugin.ChaosMode.MazeChaos)
+				return;
+
 			___itemPurchased[6] = true; // It is the fullmap index
 			___mapPriceText.text = "Out";
 			___mapPriceText.color = Color.red; // Map price text, duh
@@ -174,9 +180,11 @@ namespace BBSchoolMaze.Patches
 		[HarmonyPostfix]
 		private static void GoFastFunc(PlayerMovement __instance)
 		{
+			if (BasePlugin.chaosModeConfig.Value != BasePlugin.ChaosMode.MazeChaos)
+				return;
 			__instance.pm.GetMovementStatModifier().AddModifier("runSpeed", new(3.2f));
 			__instance.pm.GetMovementStatModifier().AddModifier("walkSpeed", new(3.2f));
-			__instance.pm.GetMovementStatModifier().AddModifier("staminaDrop", new(2/3));
+			__instance.pm.GetMovementStatModifier().AddModifier("staminaDrop", new(2 / 3));
 		}
 	}
 
@@ -185,17 +193,23 @@ namespace BBSchoolMaze.Patches
 	{
 		[HarmonyPatch("Start")]
 		[HarmonyPostfix]
-		private static void GottaGoFastNPCs(EnvironmentController __instance) =>
-			__instance.AddTimeScale(mod);
+		private static void GottaGoFastNPCs(EnvironmentController __instance)
+		{
+			if (BasePlugin.chaosModeConfig.Value == BasePlugin.ChaosMode.MazeChaos)
+				__instance.AddTimeScale(mod);
+		}
 
 		[HarmonyPatch("SpawnNPC")]
 		[HarmonyPostfix]
 		private static void AddBaldiIcon(EnvironmentController __instance, List<NPC> ___npcs)
 		{
+			if (BasePlugin.chaosModeConfig.Value != BasePlugin.ChaosMode.MazeChaos)
+				return;
+
 			NPC npc = ___npcs[___npcs.Count - 1];
 			if (npc.Character == Character.Baldi)
-				__instance.map.AddArrow(npc.transform, Color.green); // Baldo has an icon now >:D
-			
+				__instance.map.AddArrow(npc.Navigator.Entity, Color.green); // Baldo has an icon now >:D
+
 		}
 
 		[HarmonyPatch("SetupDoor")]
