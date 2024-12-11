@@ -76,16 +76,16 @@ namespace BBSchoolMaze
 		{
 			int bin = 0;
 			var pos = room.position; // it's set to that coordinate anyways
-			Debug.Log("Building cell for position: " + pos);
+			//Debug.Log("Building cell for position: " + pos);
 			for (int i = 0; i < 4; i++) // Follows all directions
 			{
 				var dir = (Direction)i;
 				int dirBin = dir.BitPosition();
 				var nextPos = pos + dir.ToIntVector2();
-				if (!bin.IsBitSet(dirBin) && (!room.ec.ContainsCoordinates(nextPos) || (!room.ec.CellFromPosition(nextPos).Null && !room.ec.CellFromPosition(nextPos).TileMatches(room))))
+				if (!bin.IsBitSet(dirBin) && (!room.ec.ContainsCoordinates(nextPos) || room.ec.CellFromPosition(nextPos).offLimits || (!room.ec.CellFromPosition(nextPos).Null && !room.ec.CellFromPosition(nextPos).TileMatches(room))))
 				{
 					int newBit = bin.ToggleBit(dirBin);
-					Debug.Log($"Changing bit from {bin} to {newBit} in direction: {dir}");
+					//Debug.Log($"Changing bit from {bin} to {newBit} in direction: {dir}");
 					bin = newBit;
 				}
 			}
