@@ -82,7 +82,7 @@ namespace BBSchoolMaze
 				var dir = (Direction)i;
 				int dirBin = dir.BitPosition();
 				var nextPos = pos + dir.ToIntVector2();
-				if (!bin.IsBitSet(dirBin) && (!room.ec.ContainsCoordinates(nextPos) || !room.ec.CellFromPosition(nextPos).TileMatches(room.ec.CellFromPosition(pos).room)))
+				if (!bin.IsBitSet(dirBin) && (!room.ec.ContainsCoordinates(nextPos) || (!room.ec.CellFromPosition(nextPos).Null && !room.ec.CellFromPosition(nextPos).TileMatches(room))))
 				{
 					int newBit = bin.ToggleBit(dirBin);
 					Debug.Log($"Changing bit from {bin} to {newBit} in direction: {dir}");
