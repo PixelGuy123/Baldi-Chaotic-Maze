@@ -13,6 +13,9 @@ namespace BBSchoolMaze.Patches
 	public class MazeChaos
 	{
 
+		internal static bool isChaosActivated = false;
+		internal static BasePlugin.ChaosMode chaosMode = BasePlugin.ChaosMode.MazeChaos;
+
 		[HarmonyPatch("StartGenerate")]
 		[HarmonyPrefix]
 		private static void GetGenerator(LevelGenerator __instance)
@@ -46,6 +49,16 @@ namespace BBSchoolMaze.Patches
 			match.InsertAndAdvance(
 			Transpilers.EmitDelegate(() =>
 			{
+				var mark = Singleton<BaseGameManager>.Instance.GetComponent<ChaosGameManager>();
+				if (!mark)
+				{
+					isChaosActivated = false;
+					return;
+				}
+
+				isChaosActivated = true;
+				chaosMode = mark.modeUsed;
+
 				foreach (var tile in i.Ec.mainHall.GetNewTileList())
 				{
 					if (!tile.offLimits)
@@ -110,54 +123,19 @@ namespace BBSchoolMaze.Patches
 	{
 		private static void Prefix(BaseGameManager __instance)
 		{
-			if (BasePlugin.chaosModeConfig.Value == BasePlugin.ChaosMode.MazeChaos)
+			if (MazeChaos.isChaosActivated && MazeChaos.chaosMode == BasePlugin.ChaosMode.MazeChaos)
 				__instance.CompleteMapOnReady();
 		}
 
 	}
 
-	[HarmonyPatch(typeof(StoreScreen), "Start")]
-	internal class NoFullmapForYou
-	{
-		private static void Postfix(ref TMP_Text ___mapPriceText, ref bool[] ___itemPurchased, ref GameObject ___mapHotSpot)
-		{
-			if (BasePlugin.chaosModeConfig.Value != BasePlugin.ChaosMode.MazeChaos)
-				return;
-
-			___itemPurchased[6] = true; // It is the fullmap index
-			___mapPriceText.text = "Out";
-			___mapPriceText.color = Color.red; // Map price text, duh
-			___mapHotSpot.SetActive(false); // That hover spot for johnny to explain the item
-		}
-	}
-
 	[HarmonyPatch(typeof(LevelBuilder))]
 	internal class MakeElevatorVisible
 	{
-		/*  <-- Obsolete (as this method doesn't even exist anymore), the elevator has an indication now.
-		[HarmonyPatch("Start")]
-		[HarmonyPrefix]
-		private static void ChangeConstBins(ref MapTile[] ___mapTiles) =>
-			___mapTiles[16] = ___mapTiles[15]; // Literally this
-
-		[HarmonyPatch("AddMapTile")]
-		[HarmonyPostfix]
-		private static void FixElevatorColor(ref IntVector2 position, EnvironmentController ___ec, ref Map ___map) // Basically make elevators cyan
-		{
-			Cell tileController = ___ec.CellFromPosition(position);
-			if (!tileController.Null && tileController.ConstBin == 16)
-				___map.tiles[position.x, position.z].SpriteRenderer.color = Color.cyan;
-			
-		}
-		*/
-
 		[HarmonyPatch("CreateElevator")]
 		[HarmonyPostfix]
 		private static void RegisterThisElevator(IntVector2 pos, ref Direction dir) =>
 			MazeChaos.tripEntrances.Add(pos, [dir.GetOpposite(), dir.PerpendicularList()[0], dir.PerpendicularList()[1], dir]); // Register this entrance to fix a later bug
-
-
-
 	}
 
 	[HarmonyPatch(typeof(Elevator), "Close")]
@@ -165,6 +143,9 @@ namespace BBSchoolMaze.Patches
 	{
 		private static bool Prefix(ref bool ___open, ref MapIcon ___mapIcon, Sprite ___lockedIconSprite, ref MeshCollider ___gateCollider)
 		{
+			if (!MazeChaos.isChaosActivated)
+				return true;
+
 			___open = false;
 			___mapIcon.spriteRenderer.sprite = ___lockedIconSprite;
 			___mapIcon.spriteRenderer.color = Color.red;
@@ -180,11 +161,19 @@ namespace BBSchoolMaze.Patches
 		[HarmonyPostfix]
 		private static void GoFastFunc(PlayerMovement __instance)
 		{
-			if (BasePlugin.chaosModeConfig.Value != BasePlugin.ChaosMode.MazeChaos)
+			if (!MazeChaos.isChaosActivated)
 				return;
-			__instance.pm.GetMovementStatModifier().AddModifier("runSpeed", new(3.2f));
-			__instance.pm.GetMovementStatModifier().AddModifier("walkSpeed", new(3.2f));
-			__instance.pm.GetMovementStatModifier().AddModifier("staminaDrop", new(2 / 3));
+
+			if (MazeChaos.chaosMode == BasePlugin.ChaosMode.MazeChaos)
+			{
+				__instance.pm.GetMovementStatModifier().AddModifier("runSpeed", new(3.2f));
+				__instance.pm.GetMovementStatModifier().AddModifier("walkSpeed", new(3.2f));
+				__instance.pm.GetMovementStatModifier().AddModifier("staminaDrop", new(0.6f));
+				return;
+			}
+			__instance.pm.GetMovementStatModifier().AddModifier("runSpeed", new(1.6f));
+			__instance.pm.GetMovementStatModifier().AddModifier("walkSpeed", new(1.6f));
+			__instance.pm.GetMovementStatModifier().AddModifier("staminaDrop", new(0.9f));
 		}
 	}
 
@@ -195,7 +184,7 @@ namespace BBSchoolMaze.Patches
 		[HarmonyPostfix]
 		private static void GottaGoFastNPCs(EnvironmentController __instance)
 		{
-			if (BasePlugin.chaosModeConfig.Value == BasePlugin.ChaosMode.MazeChaos)
+			if (MazeChaos.isChaosActivated && MazeChaos.chaosMode == BasePlugin.ChaosMode.MazeChaos)
 				__instance.AddTimeScale(mod);
 		}
 
@@ -203,7 +192,7 @@ namespace BBSchoolMaze.Patches
 		[HarmonyPostfix]
 		private static void AddBaldiIcon(EnvironmentController __instance, List<NPC> ___npcs)
 		{
-			if (BasePlugin.chaosModeConfig.Value != BasePlugin.ChaosMode.MazeChaos)
+			if  (MazeChaos.isChaosActivated && MazeChaos.chaosMode != BasePlugin.ChaosMode.MazeChaos)
 				return;
 
 			NPC npc = ___npcs[___npcs.Count - 1];
@@ -216,6 +205,9 @@ namespace BBSchoolMaze.Patches
 		[HarmonyPrefix]
 		private static void FixDoorWallCover(EnvironmentController __instance, ref Cell tile, Direction dir)
 		{
+			if (!MazeChaos.isChaosActivated)
+				return;
+
 			var pos = tile.position;
 			__instance.ConnectCells(pos, dir);
 			tile = __instance.CellFromPosition(pos);

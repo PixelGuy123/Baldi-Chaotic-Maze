@@ -1,4 +1,5 @@
-﻿using BBSchoolMaze.Plugin;
+﻿using BBSchoolMaze.Patches;
+using BBSchoolMaze.Plugin;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -10,7 +11,7 @@ namespace BBSchoolMaze
 		{
 			try
 			{
-				switch (BasePlugin.chaosModeConfig.Value)
+				switch (MazeChaos.chaosMode)
 				{
 					case BasePlugin.ChaosMode.MazeChaos:
 						Internal_MazeGenerate(room, cRng);
