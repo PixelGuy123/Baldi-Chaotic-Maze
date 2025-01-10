@@ -11,7 +11,7 @@ namespace BBSchoolMaze
 		{
 			try
 			{
-				switch (MazeChaos.chaosMode)
+				switch (MazeChaos.ChaosMode)
 				{
 					case BasePlugin.ChaosMode.MazeChaos:
 						Internal_MazeGenerate(room, cRng);

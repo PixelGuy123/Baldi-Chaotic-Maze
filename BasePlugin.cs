@@ -17,6 +17,7 @@ namespace BBSchoolMaze.Plugin
 	{
 		internal enum ChaosMode
 		{
+			None = -1,
 			MazeChaos = 0,
 			HallChaos = 1
 		}

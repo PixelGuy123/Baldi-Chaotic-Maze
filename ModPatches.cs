@@ -11,9 +11,13 @@ namespace BBSchoolMaze.Patches
 	[HarmonyPatch(typeof(LevelGenerator))]
 	public class MazeChaos
 	{
-
-		internal static bool isChaosActivated = false;
-		internal static BasePlugin.ChaosMode chaosMode = BasePlugin.ChaosMode.MazeChaos;
+		internal static BasePlugin.ChaosMode ChaosMode { 
+			get
+			{
+				var mark = Singleton<BaseGameManager>.Instance.GetComponent<ChaosGameManager>();
+				return !mark ? BasePlugin.ChaosMode.None : (BasePlugin.ChaosMode)mark.modeUsed;
+			} 
+		}
 
 		[HarmonyPatch("StartGenerate")]
 		[HarmonyPrefix]
@@ -48,17 +52,10 @@ namespace BBSchoolMaze.Patches
 			match.InsertAndAdvance(
 			Transpilers.EmitDelegate(() =>
 			{
-				var mark = Singleton<BaseGameManager>.Instance.GetComponent<ChaosGameManager>();
-				if (!mark)
-				{
-					isChaosActivated = false;
+				if (ChaosMode == BasePlugin.ChaosMode.None)
 					return;
-				}
+				
 
-
-
-				isChaosActivated = true;
-				chaosMode = (BasePlugin.ChaosMode)mark.modeUsed;
 				List<Cell> reconnectionCells = [];
 
 				foreach (var tile in i.Ec.mainHall.GetNewTileList())
@@ -155,7 +152,7 @@ namespace BBSchoolMaze.Patches
 	{
 		private static void Prefix(BaseGameManager __instance)
 		{
-			if (MazeChaos.isChaosActivated && MazeChaos.chaosMode == BasePlugin.ChaosMode.MazeChaos)
+			if (MazeChaos.ChaosMode == BasePlugin.ChaosMode.MazeChaos)
 				__instance.CompleteMapOnReady();
 		}
 
@@ -175,7 +172,7 @@ namespace BBSchoolMaze.Patches
 	{
 		private static bool Prefix(ref bool ___open, ref MapIcon ___mapIcon, Sprite ___lockedIconSprite, ref MeshCollider ___gateCollider)
 		{
-			if (!MazeChaos.isChaosActivated)
+			if (MazeChaos.ChaosMode == BasePlugin.ChaosMode.None)
 				return true;
 
 			___open = false;
@@ -193,10 +190,10 @@ namespace BBSchoolMaze.Patches
 		[HarmonyPostfix]
 		private static void GoFastFunc(PlayerMovement __instance)
 		{
-			if (!MazeChaos.isChaosActivated)
+			if (MazeChaos.ChaosMode == BasePlugin.ChaosMode.None)
 				return;
 
-			if (MazeChaos.chaosMode == BasePlugin.ChaosMode.MazeChaos)
+			if (MazeChaos.ChaosMode == BasePlugin.ChaosMode.MazeChaos)
 			{
 				__instance.pm.GetMovementStatModifier().AddModifier("runSpeed", new(3.2f));
 				__instance.pm.GetMovementStatModifier().AddModifier("walkSpeed", new(3.2f));
@@ -216,7 +213,7 @@ namespace BBSchoolMaze.Patches
 		[HarmonyPostfix]
 		private static void GottaGoFastNPCs(EnvironmentController __instance)
 		{
-			if (MazeChaos.isChaosActivated && MazeChaos.chaosMode == BasePlugin.ChaosMode.MazeChaos)
+			if (MazeChaos.ChaosMode == BasePlugin.ChaosMode.MazeChaos)
 				__instance.AddTimeScale(mod);
 		}
 
@@ -224,7 +221,7 @@ namespace BBSchoolMaze.Patches
 		[HarmonyPostfix]
 		private static void AddBaldiIcon(EnvironmentController __instance, List<NPC> ___npcs)
 		{
-			if (MazeChaos.isChaosActivated && MazeChaos.chaosMode != BasePlugin.ChaosMode.MazeChaos)
+			if (MazeChaos.ChaosMode != BasePlugin.ChaosMode.MazeChaos)
 				return;
 
 			NPC npc = ___npcs[___npcs.Count - 1];
@@ -237,7 +234,7 @@ namespace BBSchoolMaze.Patches
 		[HarmonyPrefix]
 		private static void FixDoorWallCover(EnvironmentController __instance, ref Cell tile, Direction dir)
 		{
-			if (!MazeChaos.isChaosActivated)
+			if (MazeChaos.ChaosMode == BasePlugin.ChaosMode.None)
 				return;
 
 			var pos = tile.position;
