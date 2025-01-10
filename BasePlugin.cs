@@ -42,6 +42,8 @@ namespace BBSchoolMaze.Plugin
 
 				// -- Maze Chaos
 				var mazeChaosMan = CreateManagerClone("MazeChaos", ChaosMode.MazeChaos);
+				mazeChaosMan.managerNameKey = "Men_MazeChaos_Name";
+
 				var mazeChaosScene = CreateSceneObjectClone("F3");
 
 				mazeChaosScene.name = "MazeChaosSceneObject";
@@ -82,6 +84,8 @@ namespace BBSchoolMaze.Plugin
 
 				// --- Hall Chaos
 				var hallChaosMan = CreateManagerClone("HallChaos", ChaosMode.HallChaos);
+				hallChaosMan.managerNameKey = "Men_HallChaos_Name";
+
 				var hallChaosScene = CreateSceneObjectClone("F3");
 
 				hallChaosScene.name = "HallChaosSceneObject";
@@ -111,6 +115,9 @@ namespace BBSchoolMaze.Plugin
 					newSce.MarkAsNeverUnload();
 
 					newSce.levelObject = Instantiate(newSce.levelObject);
+					newSce.levelObject.maxSpecialBuilders = Mathf.Min(newSce.levelObject.maxSpecialBuilders, newSce.levelObject.potentialStructures.Length);
+					newSce.levelObject.minSpecialBuilders = Mathf.Min(newSce.levelObject.minSpecialBuilders, newSce.levelObject.maxSpecialBuilders);
+
 					scObjs[idx++] = newSce;
 
 					return newSce;
@@ -147,7 +154,7 @@ namespace BBSchoolMaze.Plugin
 
 
 			}
-			, false);
+			, true);
 
 			// ----------------- Menu Setup ----------------
 
@@ -186,7 +193,7 @@ namespace BBSchoolMaze.Plugin
 	{
 		internal const string GUID = "pixelguy.pixelmodding.baldiplus.bbcrazymaze";
 		internal const string Name = "BB+ Crazy School Maze";
-		internal const string Version = "1.2.0";
+		internal const string Version = "1.2.1";
 	}
 
 
