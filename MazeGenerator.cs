@@ -17,7 +17,7 @@ namespace BBSchoolMaze
 						Internal_MazeGenerate(room, cRng);
 						return;
 					case BasePlugin.ChaosMode.HallChaos:
-						Internal_HallGenerate(room, cRng);
+						Internal_HallGenerate(room.position, room);
 						return;
 					default:
 						Debug.LogWarning("MAZE CHAOS: WHAT VALUE WAS GIVEN HERE?!!! Maze chaos by default!");
@@ -31,7 +31,7 @@ namespace BBSchoolMaze
 			}
 		}
 
-		static void Internal_MazeGenerate(RoomController room, System.Random cRng)
+		internal static void Internal_MazeGenerate(RoomController room, System.Random cRng)
 		{
 			List<Direction> potentialDirs = [];
 			var pos = new IntVector2();
@@ -52,7 +52,7 @@ namespace BBSchoolMaze
 				room.ec.FillUnfilledDirections(tileController, potentialDirs);
 				for (int num8 = 0; num8 < potentialDirs.Count; num8++)
 				{
-					if (!room.ContainsCoordinates(tileController.position + potentialDirs[num8].ToIntVector2()))
+					if (!room.ContainsCoordinates(tileController.position + potentialDirs[num8].ToIntVector2()) || !MazeChaos.IsInBorder(tileController.position + potentialDirs[num8].ToIntVector2()))
 					{
 						potentialDirs.RemoveAt(num8);
 						num8--;
@@ -73,22 +73,18 @@ namespace BBSchoolMaze
 			}
 		}
 
-		static void Internal_HallGenerate(RoomController room, System.Random cRng) // Since the patch goes into every tile, this can be simplified
+		internal static void Internal_HallGenerate(IntVector2 pos, RoomController room) // Since the patch goes into every tile, this can be simplified
 		{
 			int bin = 0;
-			var pos = room.position; // it's set to that coordinate anyways
 			//Debug.Log("Building cell for position: " + pos);
 			for (int i = 0; i < 4; i++) // Follows all directions
 			{
 				var dir = (Direction)i;
 				int dirBin = dir.BitPosition();
 				var nextPos = pos + dir.ToIntVector2();
-				if (!bin.IsBitSet(dirBin) && (!room.ec.ContainsCoordinates(nextPos) || room.ec.CellFromPosition(nextPos).offLimits || (!room.ec.CellFromPosition(nextPos).Null && !room.ec.CellFromPosition(nextPos).TileMatches(room))))
-				{
-					int newBit = bin.ToggleBit(dirBin);
-					//Debug.Log($"Changing bit from {bin} to {newBit} in direction: {dir}");
-					bin = newBit;
-				}
+
+				if (!bin.IsBitSet(dirBin) && !room.ec.ContainsCoordinates(nextPos) || !MazeChaos.IsInBorder(nextPos) || room.ec.CellFromPosition(nextPos).offLimits || (!room.ec.CellFromPosition(nextPos).Null && !room.ec.CellFromPosition(nextPos).TileMatches(room)))
+					bin = bin.ToggleBit(dirBin);
 			}
 
 			room.ec.CreateCell(bin, room.transform, pos, room); // Cool open flag

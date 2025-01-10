@@ -79,6 +79,7 @@ namespace BBSchoolMaze.Plugin
 
 				mazeChaosScene.levelObject.minSpecialRooms = 2;
 				mazeChaosScene.levelObject.maxSpecialRooms = 4;
+				mazeChaosScene.levelObject.specialRoomsStickToEdge = true;
 
 				mazeChaosScene.manager = mazeChaosMan;
 
@@ -105,6 +106,7 @@ namespace BBSchoolMaze.Plugin
 
 				hallChaosScene.levelObject.minSpecialRooms = 2;
 				hallChaosScene.levelObject.maxSpecialRooms = 4;
+				hallChaosScene.levelObject.specialRoomsStickToEdge = true;
 
 				hallChaosScene.manager = hallChaosMan;
 
@@ -117,6 +119,7 @@ namespace BBSchoolMaze.Plugin
 					newSce.levelObject = Instantiate(newSce.levelObject);
 					newSce.levelObject.maxSpecialBuilders = Mathf.Min(newSce.levelObject.maxSpecialBuilders, newSce.levelObject.potentialStructures.Length);
 					newSce.levelObject.minSpecialBuilders = Mathf.Min(newSce.levelObject.minSpecialBuilders, newSce.levelObject.maxSpecialBuilders);
+					newSce.levelObject.finalLevel = false;
 
 					scObjs[idx++] = newSce;
 
@@ -193,7 +196,7 @@ namespace BBSchoolMaze.Plugin
 	{
 		internal const string GUID = "pixelguy.pixelmodding.baldiplus.bbcrazymaze";
 		internal const string Name = "BB+ Crazy School Maze";
-		internal const string Version = "1.2.1";
+		internal const string Version = "1.2.2";
 	}
 
 

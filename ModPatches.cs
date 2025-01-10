@@ -3,7 +3,6 @@ using HarmonyLib;
 using MTM101BaldAPI.PlusExtensions;
 using System.Collections.Generic;
 using System.Reflection.Emit;
-using TMPro;
 using UnityEngine;
 
 namespace BBSchoolMaze.Patches
@@ -56,13 +55,21 @@ namespace BBSchoolMaze.Patches
 					return;
 				}
 
+
+
 				isChaosActivated = true;
 				chaosMode = mark.modeUsed;
+				List<Cell> reconnectionCells = [];
 
 				foreach (var tile in i.Ec.mainHall.GetNewTileList())
 				{
 					if (!tile.offLimits)
-						i.Ec.DestroyCell(tile);
+					{
+						if (IsInBorder(tile.position))
+							i.Ec.DestroyCell(tile);
+						else if (tile.TileMatches(i.Ec.mainHall)) // feels useless, but it makes ElevatorsInSpecialRoom work properly
+							reconnectionCells.Add(tile);
+					}
 
 				}
 
@@ -75,12 +82,27 @@ namespace BBSchoolMaze.Patches
 				{
 					for (int z = 0; z < i.Ec.levelSize.z; z++)
 					{
-						if (!i.Ec.ContainsCoordinates(x, z) || !i.Ec.CellFromPosition(x, z).Null) continue;
+						if (!i.Ec.ContainsCoordinates(x, z) || !i.Ec.CellFromPosition(x, z).Null || !IsInBorder(x, z)) continue;
 						i.Ec.mainHall.position = new(x, z);
 
 						MazeGenerator.Generate(i.Ec.mainHall, rng);
 					}
 
+				}
+
+				foreach (var cell in reconnectionCells)
+				{
+					for (int i = 0; i < 4; i++)
+					{
+						var dir = (Direction)i;
+						var nextPos = cell.position + dir.ToIntVector2();
+						if (MazeChaos.i.Ec.ContainsCoordinates(nextPos))
+						{
+							var nextCell = MazeChaos.i.Ec.CellFromPosition(nextPos);
+							if (nextCell.TileMatches(cell.room))
+								MazeChaos.i.Ec.ConnectCells(cell.position, dir);
+						}
+					}
 				}
 
 				i.Ec.mainHall.position = new();
@@ -115,6 +137,16 @@ namespace BBSchoolMaze.Patches
 		static LevelGenerator i;
 
 		internal static Dictionary<IntVector2, Direction[]> tripEntrances = [];
+
+#pragma warning disable Harmony003 // Harmony non-ref patch parameters modified
+		internal static bool IsInBorder(IntVector2 pos) =>
+			IsInBorder(pos.x, pos.z);
+		internal static bool IsInBorder(int x, int z) =>
+			i.ld.outerEdgeBuffer <= x &&
+			i.ld.outerEdgeBuffer <= z &&
+			(i.Ec.levelSize.x - i.ld.outerEdgeBuffer) >= x &&
+			(i.Ec.levelSize.z - i.ld.outerEdgeBuffer) >= z;
+#pragma warning restore Harmony003 // Harmony non-ref patch parameters modified
 	}
 
 
@@ -192,7 +224,7 @@ namespace BBSchoolMaze.Patches
 		[HarmonyPostfix]
 		private static void AddBaldiIcon(EnvironmentController __instance, List<NPC> ___npcs)
 		{
-			if  (MazeChaos.isChaosActivated && MazeChaos.chaosMode != BasePlugin.ChaosMode.MazeChaos)
+			if (MazeChaos.isChaosActivated && MazeChaos.chaosMode != BasePlugin.ChaosMode.MazeChaos)
 				return;
 
 			NPC npc = ___npcs[___npcs.Count - 1];
@@ -212,6 +244,11 @@ namespace BBSchoolMaze.Patches
 			__instance.ConnectCells(pos, dir);
 			tile = __instance.CellFromPosition(pos);
 		}
+
+		//[HarmonyPatch("SetTileInstantiation")]
+		//[HarmonyPostfix]
+		//static void AlwaysVisible(EnvironmentController __instance) =>
+		//	__instance.instantiateTiles = true;
 
 
 		readonly static TimeScaleModifier mod = new() { environmentTimeScale = 1f, npcTimeScale = 2.5f };
