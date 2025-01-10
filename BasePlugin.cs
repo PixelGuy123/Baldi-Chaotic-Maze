@@ -142,7 +142,7 @@ namespace BBSchoolMaze.Plugin
 
 					var chaos = newMan.ReplaceComponent<ChaosGameManager, MainGameManager>();
 
-					chaos.modeUsed = mode;
+					chaos.modeUsed = (int)mode;
 					chaos.winScreen = Instantiate(Resources.FindObjectsOfTypeAll<ChallengeWin>().First(x => x.GetInstanceID() > 0));
 					chaos.winScreen.transform.SetParent(chaos.transform);
 					chaos.winScreen.transform.localPosition = Vector3.zero;

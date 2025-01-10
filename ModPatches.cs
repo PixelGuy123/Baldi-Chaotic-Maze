@@ -58,7 +58,7 @@ namespace BBSchoolMaze.Patches
 
 
 				isChaosActivated = true;
-				chaosMode = mark.modeUsed;
+				chaosMode = (BasePlugin.ChaosMode)mark.modeUsed;
 				List<Cell> reconnectionCells = [];
 
 				foreach (var tile in i.Ec.mainHall.GetNewTileList())

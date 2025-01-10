@@ -10,7 +10,7 @@ namespace BBSchoolMaze
 	internal class ChaosGameManager : MainGameManager
 	{
 		[SerializeField]
-		public BasePlugin.ChaosMode modeUsed = BasePlugin.ChaosMode.MazeChaos;
+		public int modeUsed = 0;
 
 		[SerializeField]
 		public ChallengeWin winScreen;
