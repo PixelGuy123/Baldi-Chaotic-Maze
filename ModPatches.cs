@@ -23,6 +23,9 @@ namespace BBSchoolMaze.Patches
 		[HarmonyPrefix]
 		private static void GetGenerator(LevelGenerator __instance)
 		{
+			if (ChaosMode == BasePlugin.ChaosMode.None)
+				return;
+
 			tripEntrances.Clear();
 			i = __instance;
 		}
@@ -30,29 +33,91 @@ namespace BBSchoolMaze.Patches
 
 		[HarmonyPatch("Generate", MethodType.Enumerator)]
 		[HarmonyTranspiler]
-		private static IEnumerable<CodeInstruction> EstablishChaos(IEnumerable<CodeInstruction> instructions)
-		{
-			var match = new CodeMatcher(instructions)
+		private static IEnumerable<CodeInstruction> EstablishChaos(IEnumerable<CodeInstruction> instructions) =>
+			new CodeMatcher(instructions)
+
+			.MatchForward(false, 
+				new(OpCodes.Ldarg_0),
+				new(OpCodes.Ldloc_2),
+				new(CodeInstruction.LoadField(typeof(LevelBuilder), "ld")),
+				new(CodeInstruction.LoadField(typeof(LevelObject), "exitCount"))
+			)
+			.InsertAndAdvance(Transpilers.EmitDelegate(() =>
+			{
+				if (ChaosMode != BasePlugin.ChaosMode.RoomChaos)
+					return;
+				
+				foreach (var cell in i.Ec.cells)
+				{
+					if (cell.room.type == RoomType.Hall)
+						i.Ec.DestroyCell(cell);
+				}
+				const int hallLength = 12;
+				IntVector2 realMid = new(i.levelSize.x / 2, i.levelSize.z / 2 - hallLength / 2);
+				TryCreateCell(12, realMid + new IntVector2(0, 1));
+				IntVector2 pos = realMid + new IntVector2(0, 2);
+
+				for (int y = 0; y < hallLength; y++)
+				{
+					TryCreateCell(10, pos);
+					pos.z++;
+				}
+
+				TryCreateCell(9, pos);
+				pos.x++;
+
+				for (int y = 0; y < hallLength; y++)
+				{
+					TryCreateCell(5, pos);
+					pos.x++;
+				}
+
+				TryCreateCell(3, pos);
+				pos.z--;
+				for (int y = 0; y < hallLength; y++)
+				{
+					TryCreateCell(10, pos);
+					pos.z--;
+				}
+
+
+				TryCreateCell(6, pos);
+				pos.x--;
+
+				for (int y = 0; y < hallLength; y++)
+				{
+					TryCreateCell(5, pos);
+					pos.x--;
+				}
+
+				static void TryCreateCell(int tileBin, IntVector2 pos)
+				{
+					if (i.Ec.CellFromPosition(pos).Null)
+						i.Ec.CreateCell(tileBin, pos, i.Ec.mainHall);
+				}
+				
+			}))
+
 
 			.MatchForward(false,
-				new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(RoomController), "forcedDoorPositions")),
-				new CodeMatch(OpCodes.Ldarg_0),
-				new CodeMatch(OpCodes.Ldfld, name: "<i>5__50"),
-				new CodeMatch(OpCodes.Callvirt, AccessTools.PropertyGetter(typeof(List<IntVector2>), "Item")),
-				new CodeMatch(OpCodes.Ldarg_0),
-				new CodeMatch(OpCodes.Ldfld, name: "<room>5__74"),
-				new CodeMatch(OpCodes.Ldc_I4_0),
-				new CodeMatch(OpCodes.Ldc_I4_1),
-				new CodeMatch(OpCodes.Ldloca_S, name: "V_87"),
-				new CodeMatch(OpCodes.Ldloca_S, name: "V_88"),
-				new CodeMatch(CodeInstruction.Call("LevelBuilder:BuildDoorIfPossible", [typeof(IntVector2), typeof(RoomController), typeof(bool), typeof(bool), typeof(RoomController).MakeByRefType(), typeof(IntVector2).MakeByRefType()]))
-				); // Get to this method
+				new(CodeInstruction.LoadField(typeof(RoomController), "forcedDoorPositions")),
+				new(OpCodes.Ldarg_0),
+				new(OpCodes.Ldfld, name: "<i>5__50"),
+				new(OpCodes.Callvirt, AccessTools.PropertyGetter(typeof(List<IntVector2>), "Item")),
+				new(OpCodes.Ldarg_0),
+				new(OpCodes.Ldfld, name: "<room>5__74"),
+				new(OpCodes.Ldc_I4_0),
+				new(OpCodes.Ldc_I4_1),
+				new(OpCodes.Ldloca_S, name: "V_87"),
+				new(OpCodes.Ldloca_S, name: "V_88"),
+				new(CodeInstruction.Call("LevelBuilder:BuildDoorIfPossible", [typeof(IntVector2), typeof(RoomController), typeof(bool), typeof(bool), typeof(RoomController).MakeByRefType(), typeof(IntVector2).MakeByRefType()]))
+				) // Get to this method
 
-			match.Advance(-20); // Goes to right spot
-			match.InsertAndAdvance(
+			.Advance(-20) // Goes to right spot
+			.InsertAndAdvance(
 			Transpilers.EmitDelegate(() =>
 			{
-				if (ChaosMode == BasePlugin.ChaosMode.None)
+				if (ChaosMode == BasePlugin.ChaosMode.None || ChaosMode == BasePlugin.ChaosMode.RoomChaos)
 					return;
 				
 
@@ -126,10 +191,9 @@ namespace BBSchoolMaze.Patches
 				}
 
 				tripEntrances.Clear(); // Done
-			}));
-
-			return match.InstructionEnumeration();
-		}
+			}))
+			.InstructionEnumeration();
+		
 
 		static LevelGenerator i;
 
@@ -152,7 +216,7 @@ namespace BBSchoolMaze.Patches
 	{
 		private static void Prefix(BaseGameManager __instance)
 		{
-			if (MazeChaos.ChaosMode == BasePlugin.ChaosMode.MazeChaos)
+			if (MazeChaos.ChaosMode == BasePlugin.ChaosMode.MazeChaos || MazeChaos.ChaosMode == BasePlugin.ChaosMode.RoomChaos)
 				__instance.CompleteMapOnReady();
 		}
 
@@ -163,8 +227,11 @@ namespace BBSchoolMaze.Patches
 	{
 		[HarmonyPatch("CreateElevator")]
 		[HarmonyPostfix]
-		private static void RegisterThisElevator(IntVector2 pos, ref Direction dir) =>
-			MazeChaos.tripEntrances.Add(pos, [dir.GetOpposite(), dir.PerpendicularList()[0], dir.PerpendicularList()[1], dir]); // Register this entrance to fix a later bug
+		private static void RegisterThisElevator(IntVector2 pos, ref Direction dir)
+		{
+			if (MazeChaos.ChaosMode != BasePlugin.ChaosMode.None)
+				MazeChaos.tripEntrances.Add(pos, [dir.GetOpposite(), dir.PerpendicularList()[0], dir.PerpendicularList()[1], dir]); // Register this entrance to fix a later bug
+		}
 	}
 
 	[HarmonyPatch(typeof(Elevator), "Close")]
@@ -172,7 +239,7 @@ namespace BBSchoolMaze.Patches
 	{
 		private static bool Prefix(ref bool ___open, ref MapIcon ___mapIcon, Sprite ___lockedIconSprite, ref MeshCollider ___gateCollider)
 		{
-			if (MazeChaos.ChaosMode == BasePlugin.ChaosMode.None)
+			if (MazeChaos.ChaosMode == BasePlugin.ChaosMode.None || MazeChaos.ChaosMode == BasePlugin.ChaosMode.RoomChaos)
 				return true;
 
 			___open = false;
@@ -190,19 +257,25 @@ namespace BBSchoolMaze.Patches
 		[HarmonyPostfix]
 		private static void GoFastFunc(PlayerMovement __instance)
 		{
-			if (MazeChaos.ChaosMode == BasePlugin.ChaosMode.None)
-				return;
 
-			if (MazeChaos.ChaosMode == BasePlugin.ChaosMode.MazeChaos)
+			switch (MazeChaos.ChaosMode)
 			{
-				__instance.pm.GetMovementStatModifier().AddModifier("runSpeed", new(3.2f));
-				__instance.pm.GetMovementStatModifier().AddModifier("walkSpeed", new(3.2f));
-				__instance.pm.GetMovementStatModifier().AddModifier("staminaDrop", new(0.6f));
-				return;
+				case BasePlugin.ChaosMode.MazeChaos:
+					__instance.pm.GetMovementStatModifier().AddModifier("runSpeed", new(3.2f));
+					__instance.pm.GetMovementStatModifier().AddModifier("walkSpeed", new(3.2f));
+					__instance.pm.GetMovementStatModifier().AddModifier("staminaDrop", new(0.6f));
+					break;
+				case BasePlugin.ChaosMode.HallChaos:
+					__instance.pm.GetMovementStatModifier().AddModifier("runSpeed", new(1.6f));
+					__instance.pm.GetMovementStatModifier().AddModifier("walkSpeed", new(1.6f));
+					__instance.pm.GetMovementStatModifier().AddModifier("staminaDrop", new(0.9f));
+					break;
+				case BasePlugin.ChaosMode.RoomChaos:
+					__instance.pm.GetMovementStatModifier().AddModifier("runSpeed", new(4f));
+					__instance.pm.GetMovementStatModifier().AddModifier("walkSpeed", new(2f));
+					__instance.pm.GetMovementStatModifier().AddModifier("staminaDrop", new(0.85f));
+					break;
 			}
-			__instance.pm.GetMovementStatModifier().AddModifier("runSpeed", new(1.6f));
-			__instance.pm.GetMovementStatModifier().AddModifier("walkSpeed", new(1.6f));
-			__instance.pm.GetMovementStatModifier().AddModifier("staminaDrop", new(0.9f));
 		}
 	}
 
@@ -249,6 +322,16 @@ namespace BBSchoolMaze.Patches
 
 
 		readonly static TimeScaleModifier mod = new() { environmentTimeScale = 1f, npcTimeScale = 2.5f };
+	}
+
+	[HarmonyPatch(typeof(VentController), "Initialize")]
+	static class FastVents
+	{
+		static void Postfix(ref float ___speed)
+		{
+			if (MazeChaos.ChaosMode == BasePlugin.ChaosMode.RoomChaos)
+				___speed = 200f;
+		}
 	}
 
 

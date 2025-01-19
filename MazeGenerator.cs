@@ -90,13 +90,13 @@ namespace BBSchoolMaze
 			room.ec.CreateCell(bin, room.transform, pos, room); // Cool open flag
 		}
 
-		static int ToggleBit(this int flag, int position) // 0000 flag (4-bit flag)
+		public static int ToggleBit(this int flag, int position) // 0000 flag (4-bit flag)
 		{
 			// Use XOR to flip the bit at the specified position
 			return flag ^ (1 << position);
 		}
 
-		static bool IsBitSet(this int flag, int position)
+		public static bool IsBitSet(this int flag, int position)
 		{
 			// Check if the bit at the specified position is set (1)
 			return (flag & (1 << position)) != 0;
