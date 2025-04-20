@@ -191,28 +191,21 @@ namespace BBSchoolMaze.Plugin
 				roomChaosScene.levelObject.lightMode = LightMode.Additive;
 				roomChaosScene.levelObject.standardLightColor = new(1f, 0.95f, 0.94f);
 
-				StructureWithParameters vent = null;
-
-				foreach (var str in roomChaosScene.levelObject.potentialStructures)
-				{
-					if (str.selection.prefab is Structure_Vent)
-					{
-						vent = str.selection;
-						break;
-					}	
-				}
-
-				roomChaosScene.levelObject.potentialStructures = vent == null ? [] : [
-					new() {
-						selection = vent,
-						weight = 9999
+				StructureWithParameters vent = new() {
+					prefab = Resources.FindObjectsOfTypeAll<Structure_Vent>().First(x => x.GetInstanceID() > 0),
+					parameters = new() {
+						minMax = [
+							new(1, 35), // z defines how many vent iterations will spawn
+							new(4, 6), // Min max to tell how many corners the vent will have in its path (like, 5 segments before going straight).
+							new(15, 0) // uses x axis to tell how far the vent's exit needs to be from the entrance
+						]
 					}
-					];
-				vent.parameters.minMax[0].z *= 25;
-				roomChaosScene.levelObject.forcedStructures = [];
+				};
 
-				roomChaosScene.levelObject.minSpecialBuilders = 1;
-				roomChaosScene.levelObject.maxSpecialBuilders = 1;
+				roomChaosScene.levelObject.forcedStructures = [vent];
+
+				roomChaosScene.levelObject.minSpecialBuilders = 0;
+				roomChaosScene.levelObject.maxSpecialBuilders = 0;
 
 				roomChaosScene.manager = roomChaosMan;
 
@@ -306,7 +299,7 @@ namespace BBSchoolMaze.Plugin
 	{
 		internal const string GUID = "pixelguy.pixelmodding.baldiplus.bbcrazymaze";
 		internal const string Name = "BB+ Crazy School Maze";
-		internal const string Version = "1.2.3";
+		internal const string Version = "1.2.3.1";
 	}
 
 
