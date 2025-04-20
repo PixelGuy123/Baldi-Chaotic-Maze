@@ -117,7 +117,7 @@ namespace BBSchoolMaze.Patches
 			.InsertAndAdvance(
 			Transpilers.EmitDelegate(() =>
 			{
-				if (ChaosMode == BasePlugin.ChaosMode.None || ChaosMode == BasePlugin.ChaosMode.RoomChaos)
+				if (!ModeClearsOutMap)
 					return;
 				
 
@@ -194,7 +194,8 @@ namespace BBSchoolMaze.Patches
 			}))
 			.InstructionEnumeration();
 		
-
+		static bool ModeClearsOutMap =>
+			ChaosMode == BasePlugin.ChaosMode.MazeChaos || ChaosMode == BasePlugin.ChaosMode.HallChaos;
 		static LevelGenerator i;
 
 		internal static Dictionary<IntVector2, Direction[]> tripEntrances = [];

@@ -20,7 +20,7 @@ namespace BBSchoolMaze
 						Internal_HallGenerate(room.position, room);
 						return;
 					default:
-						Debug.LogWarning("MAZE CHAOS: WHAT VALUE WAS GIVEN HERE?!!! Maze chaos by default!");
+						Debug.LogWarning("MAZE CHAOS: WHAT VALUE WAS GIVEN HERE?!!! Using MazeChaos generation by default!");
 						Internal_MazeGenerate(room, cRng);
 						return;
 				}
