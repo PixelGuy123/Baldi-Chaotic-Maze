@@ -1,12 +1,12 @@
-﻿using BepInEx;
+﻿using System.Collections.Generic;
+using System.Linq;
+using BepInEx;
 using HarmonyLib;
+using ModdedModesAPI.ModesAPI;
 using MTM101BaldAPI;
 using MTM101BaldAPI.AssetTools;
 using MTM101BaldAPI.Registers;
-using System.Linq;
 using UnityEngine;
-using ModdedModesAPI.ModesAPI;
-using System.Collections.Generic;
 
 namespace BBSchoolMaze.Plugin
 {
@@ -191,9 +191,11 @@ namespace BBSchoolMaze.Plugin
 				roomChaosScene.levelObject.lightMode = LightMode.Additive;
 				roomChaosScene.levelObject.standardLightColor = new(1f, 0.95f, 0.94f);
 
-				StructureWithParameters vent = new() {
+				StructureWithParameters vent = new()
+				{
 					prefab = Resources.FindObjectsOfTypeAll<Structure_Vent>().First(x => x.GetInstanceID() > 0),
-					parameters = new() {
+					parameters = new()
+					{
 						minMax = [
 							new(1, 35), // z defines how many vent iterations will spawn
 							new(4, 6), // Min max to tell how many corners the vent will have in its path (like, 5 segments before going straight).
@@ -213,7 +215,7 @@ namespace BBSchoolMaze.Plugin
 				var allAtOnceChaosMan = CreateManagerClone("AllAtOnceChaos", ChaosMode.AllAtOnceChaos);
 				allAtOnceChaosMan.managerNameKey = "Men_AllTypesChallenge_Name";
 
-				var allAtOnceChaosScene = CreateSceneObjectClone("F4", "Laboratory_Lvl4");
+				var allAtOnceChaosScene = CreateSceneObjectClone("F4", LevelType.Laboratory);
 
 				allAtOnceChaosScene.name = "AllAtOnceChaosSceneObject";
 				allAtOnceChaosScene.levelTitle = "CC4";
@@ -235,38 +237,40 @@ namespace BBSchoolMaze.Plugin
 
 				allAtOnceChaosScene.levelObject.standardLightColor = new(0.95f, 0.64f, 0.69f);
 				// Adds all the forced structures from other levels
-				allAtOnceChaosScene.levelObject.forcedStructures = allAtOnceChaosScene.levelObject.forcedStructures.AddNewStructures(GetRandomizedLevelObject("F4", "Maintenance_Lvl4").forcedStructures);
-				allAtOnceChaosScene.levelObject.forcedStructures = allAtOnceChaosScene.levelObject.forcedStructures.AddNewStructures(GetRandomizedLevelObject("F4", "Factory_Lvl4").forcedStructures, typeof(Structure_ConveyorBelt));
-				allAtOnceChaosScene.levelObject.forcedStructures = allAtOnceChaosScene.levelObject.forcedStructures.AddNewStructures(GetSceneObject("F3").levelObject.forcedStructures);
+				allAtOnceChaosScene.levelObject.forcedStructures = allAtOnceChaosScene.levelObject.forcedStructures.AddNewStructures(GetRandomizedLevelObject("F4", LevelType.Maintenance).forcedStructures);
+				allAtOnceChaosScene.levelObject.forcedStructures = allAtOnceChaosScene.levelObject.forcedStructures.AddNewStructures(GetRandomizedLevelObject("F4", LevelType.Factory).forcedStructures, typeof(Structure_ConveyorBelt));
+				allAtOnceChaosScene.levelObject.forcedStructures = allAtOnceChaosScene.levelObject.forcedStructures.AddNewStructures(GetActualLevelObject("F3").forcedStructures);
 
 				// Adds all the other special rooms from other levels
-				allAtOnceChaosScene.levelObject.potentialSpecialRooms = allAtOnceChaosScene.levelObject.potentialSpecialRooms.AddNewSpecialRooms(GetRandomizedLevelObject("F4", "Maintenance_Lvl4").potentialSpecialRooms);
-				allAtOnceChaosScene.levelObject.potentialSpecialRooms = allAtOnceChaosScene.levelObject.potentialSpecialRooms.AddNewSpecialRooms(GetRandomizedLevelObject("F4", "Factory_Lvl4").potentialSpecialRooms);
+				allAtOnceChaosScene.levelObject.potentialSpecialRooms = allAtOnceChaosScene.levelObject.potentialSpecialRooms.AddNewSpecialRooms(GetRandomizedLevelObject("F4", LevelType.Maintenance).potentialSpecialRooms);
+				allAtOnceChaosScene.levelObject.potentialSpecialRooms = allAtOnceChaosScene.levelObject.potentialSpecialRooms.AddNewSpecialRooms(GetRandomizedLevelObject("F4", LevelType.Factory).potentialSpecialRooms);
 
 				allAtOnceChaosScene.levelObject.minSpecialRooms = allAtOnceChaosScene.levelObject.potentialSpecialRooms.Length;
 				allAtOnceChaosScene.levelObject.maxSpecialRooms = allAtOnceChaosScene.levelObject.minSpecialRooms;
 
 				// Grabbing all possible random textures
-				allAtOnceChaosScene.levelObject.hallFloorTexs = allAtOnceChaosScene.levelObject.hallFloorTexs.AddRangeToArray(GetRandomizedLevelObject("F4", "Maintenance_Lvl4").hallFloorTexs);
-				allAtOnceChaosScene.levelObject.hallFloorTexs = allAtOnceChaosScene.levelObject.hallFloorTexs.AddRangeToArray(GetRandomizedLevelObject("F4", "Factory_Lvl4").hallFloorTexs);
+				allAtOnceChaosScene.levelObject.hallFloorTexs = allAtOnceChaosScene.levelObject.hallFloorTexs.AddRangeToArray(GetRandomizedLevelObject("F4", LevelType.Maintenance).hallFloorTexs);
+				allAtOnceChaosScene.levelObject.hallFloorTexs = allAtOnceChaosScene.levelObject.hallFloorTexs.AddRangeToArray(GetRandomizedLevelObject("F4", LevelType.Factory).hallFloorTexs);
 
-				allAtOnceChaosScene.levelObject.hallCeilingTexs = allAtOnceChaosScene.levelObject.hallCeilingTexs.AddRangeToArray(GetRandomizedLevelObject("F4", "Maintenance_Lvl4").hallCeilingTexs);
-				allAtOnceChaosScene.levelObject.hallCeilingTexs = allAtOnceChaosScene.levelObject.hallCeilingTexs.AddRangeToArray(GetRandomizedLevelObject("F4", "Factory_Lvl4").hallCeilingTexs);
+				allAtOnceChaosScene.levelObject.hallCeilingTexs = allAtOnceChaosScene.levelObject.hallCeilingTexs.AddRangeToArray(GetRandomizedLevelObject("F4", LevelType.Maintenance).hallCeilingTexs);
+				allAtOnceChaosScene.levelObject.hallCeilingTexs = allAtOnceChaosScene.levelObject.hallCeilingTexs.AddRangeToArray(GetRandomizedLevelObject("F4", LevelType.Factory).hallCeilingTexs);
 
-				allAtOnceChaosScene.levelObject.hallWallTexs = allAtOnceChaosScene.levelObject.hallWallTexs.AddRangeToArray(GetRandomizedLevelObject("F4", "Maintenance_Lvl4").hallWallTexs);
-				allAtOnceChaosScene.levelObject.hallWallTexs = allAtOnceChaosScene.levelObject.hallWallTexs.AddRangeToArray(GetRandomizedLevelObject("F4", "Factory_Lvl4").hallWallTexs);
+				allAtOnceChaosScene.levelObject.hallWallTexs = allAtOnceChaosScene.levelObject.hallWallTexs.AddRangeToArray(GetRandomizedLevelObject("F4", LevelType.Maintenance).hallWallTexs);
+				allAtOnceChaosScene.levelObject.hallWallTexs = allAtOnceChaosScene.levelObject.hallWallTexs.AddRangeToArray(GetRandomizedLevelObject("F4", LevelType.Factory).hallWallTexs);
 
-				allAtOnceChaosScene.levelObject.hallLights = allAtOnceChaosScene.levelObject.hallLights.AddRangeToArray(GetRandomizedLevelObject("F4", "Maintenance_Lvl4").hallLights);
-				allAtOnceChaosScene.levelObject.hallLights = allAtOnceChaosScene.levelObject.hallLights.AddRangeToArray(GetRandomizedLevelObject("F4", "Factory_Lvl4").hallLights);
+				allAtOnceChaosScene.levelObject.hallLights = allAtOnceChaosScene.levelObject.hallLights.AddRangeToArray(GetRandomizedLevelObject("F4", LevelType.Maintenance).hallLights);
+				allAtOnceChaosScene.levelObject.hallLights = allAtOnceChaosScene.levelObject.hallLights.AddRangeToArray(GetRandomizedLevelObject("F4", LevelType.Factory).hallLights);
 
 				allAtOnceChaosScene.levelObject.maxLightDistance += 3;
 				allAtOnceChaosScene.levelObject.standardLightStrength -= 4;
 
 				// Add more NPCs for chaos
 				allAtOnceChaosScene.additionalNPCs += 8;
-				for (int i = 0; i < allAtOnceChaosScene.levelObject.roomGroup.Length; i++){
+				for (int i = 0; i < allAtOnceChaosScene.levelObject.roomGroup.Length; i++)
+				{
 					var group = allAtOnceChaosScene.levelObject.roomGroup[i];
-					if (group.name != "Class" && group.name != "Office"){
+					if (group.name != "Class" && group.name != "Office")
+					{
 						group.minRooms *= 6;
 						group.maxRooms *= 6;
 					}
@@ -277,14 +281,42 @@ namespace BBSchoolMaze.Plugin
 				SceneObject GetSceneObject(string sceneName) =>
 					Resources.FindObjectsOfTypeAll<SceneObject>().First(x => x.GetInstanceID() > 0 && x.levelTitle == sceneName);
 
-				LevelObject GetRandomizedLevelObject(string sceneName, string lvlName) =>
-					GetSceneObject(sceneName).randomizedLevelObject.First(x => x.selection.name == lvlName).selection;
+				LevelObject GetRandomizedLevelObject(string sceneName, LevelType? preferredLevelType = null)
+				{
+					var sce = GetSceneObject(sceneName);
+					if (preferredLevelType != null)
+						return sce.randomizedLevelObject.First(x => x.selection.type == preferredLevelType).selection;
+
+					if (sce.randomizedLevelObject.Length != 0)
+						return sce.randomizedLevelObject[0].selection;
+
+					return sce.levelObject;
+				}
+
+				LevelObject GetActualLevelObject(string sceneName, LevelType? preferredLevelType = null)
+				{
+					var sce = GetSceneObject(sceneName);
+					LevelObject lvlObj;
+
+					if (preferredLevelType == null && sce.levelObject)
+						lvlObj = sce.levelObject;
+					else
+					{
+						var selLevelObject = sce.randomizedLevelObject.FirstOrDefault(x => x.selection.type == preferredLevelType);
+						if (selLevelObject == null)
+							lvlObj = sce.randomizedLevelObject[0].selection; // Selects the first one then
+						else
+							lvlObj = selLevelObject.selection;
+					}
+
+					return lvlObj;
+				}
 
 				// RoomGroup GetARoomGroupFromSceneObject(string sceneName, string specificLevelObjectName, string groupName) =>
 				// 	 GetRandomizedLevelObject(sceneName, specificLevelObjectName).roomGroup.First(x => x.name == groupName);
-				
 
-				SceneObject CreateSceneObjectClone(string lvlName, string specificLevelObjectName = "")
+
+				SceneObject CreateSceneObjectClone(string lvlName, LevelType? levelType = null)
 				{
 					var sce = GetSceneObject(lvlName);
 					var newSce = Instantiate(sce);
@@ -292,10 +324,16 @@ namespace BBSchoolMaze.Plugin
 
 					LevelObject lvlObj;
 
-					if (string.IsNullOrEmpty(specificLevelObjectName))
+					if (levelType == null && newSce.levelObject)
 						lvlObj = newSce.levelObject;
 					else
-						lvlObj = newSce.randomizedLevelObject.First(x => x.selection.name == specificLevelObjectName).selection;
+					{
+						var selLevelObject = newSce.randomizedLevelObject.FirstOrDefault(x => x.selection.type == levelType);
+						if (selLevelObject == null)
+							lvlObj = newSce.randomizedLevelObject[0].selection; // Selects the first one then
+						else
+							lvlObj = selLevelObject.selection;
+					}
 
 					lvlObj = Instantiate(lvlObj);
 					lvlObj.maxSpecialBuilders = Mathf.Min(lvlObj.maxSpecialBuilders, lvlObj.potentialStructures.Length);
@@ -303,7 +341,7 @@ namespace BBSchoolMaze.Plugin
 					lvlObj.finalLevel = false;
 					newSce.levelObject = lvlObj;
 					newSce.randomizedLevelObject = [];
-					
+
 
 					scObjs[idx++] = newSce;
 
@@ -322,7 +360,7 @@ namespace BBSchoolMaze.Plugin
 					newMan.gameObject.ConvertToPrefab(true);
 					newMan.gameObject.SetActive(true);
 
-					
+
 
 					var chaos = newMan.ReplaceComponent<ChaosGameManager, MainGameManager>();
 
@@ -389,7 +427,7 @@ namespace BBSchoolMaze.Plugin
 	{
 		internal const string GUID = "pixelguy.pixelmodding.baldiplus.bbcrazymaze";
 		internal const string Name = "BB+ Crazy School Maze";
-		internal const string Version = "1.2.3.1";
+		internal const string Version = "1.2.3.2";
 	}
 
 
