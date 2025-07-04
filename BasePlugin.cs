@@ -362,7 +362,7 @@ namespace BBSchoolMaze.Plugin
 
 
 
-					var chaos = newMan.ReplaceComponent<ChaosGameManager, MainGameManager>();
+					var chaos = newMan.gameObject.SwapComponent<MainGameManager, ChaosGameManager>();
 
 					chaos.modeUsed = (int)mode;
 					chaos.winScreen = Instantiate(Resources.FindObjectsOfTypeAll<ChallengeWin>().First(x => x.GetInstanceID() > 0));
@@ -379,7 +379,7 @@ namespace BBSchoolMaze.Plugin
 
 
 			}
-			, true);
+			, LoadingEventOrder.Post);
 
 			// ----------------- Menu Setup ----------------
 
@@ -427,7 +427,7 @@ namespace BBSchoolMaze.Plugin
 	{
 		internal const string GUID = "pixelguy.pixelmodding.baldiplus.bbcrazymaze";
 		internal const string Name = "BB+ Crazy School Maze";
-		internal const string Version = "1.2.3.2";
+		internal const string Version = "1.2.4";
 	}
 
 
