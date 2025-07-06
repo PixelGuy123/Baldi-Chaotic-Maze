@@ -1,8 +1,8 @@
-﻿using BBSchoolMaze.Plugin;
+﻿using System.Collections.Generic;
+using System.Reflection.Emit;
+using BBSchoolMaze.Plugin;
 using HarmonyLib;
 using MTM101BaldAPI.PlusExtensions;
-using System.Collections.Generic;
-using System.Reflection.Emit;
 using UnityEngine;
 
 namespace BBSchoolMaze.Patches
@@ -11,12 +11,13 @@ namespace BBSchoolMaze.Patches
 	[HarmonyPatch(typeof(LevelGenerator))]
 	public class MazeChaos
 	{
-		internal static BasePlugin.ChaosMode ChaosMode { 
+		internal static BasePlugin.ChaosMode ChaosMode
+		{
 			get
 			{
 				var mark = Singleton<BaseGameManager>.Instance.GetComponent<ChaosGameManager>();
 				return !mark ? BasePlugin.ChaosMode.None : (BasePlugin.ChaosMode)mark.modeUsed;
-			} 
+			}
 		}
 
 		[HarmonyPatch("StartGenerate")]
@@ -27,176 +28,94 @@ namespace BBSchoolMaze.Patches
 				return;
 
 			tripEntrances.Clear();
+			afterAllRoomsCalled = false;
 			i = __instance;
 		}
 
+		[HarmonyPatch(typeof(RoomFunctionContainer), "AfterAllRoomsPlaced")] // Called right after rooms are generated; perfect spot to generate chaos!!!
+		[HarmonyPrefix]
+		static void StartTheMess(LevelBuilder builder, System.Random rng)
+		{
+			if (!ModeClearsOutMap || afterAllRoomsCalled)
+				return;
+			afterAllRoomsCalled = true;
 
-		[HarmonyPatch("Generate", MethodType.Enumerator)]
-		[HarmonyTranspiler]
-		private static IEnumerable<CodeInstruction> EstablishChaos(IEnumerable<CodeInstruction> instructions) =>
-			new CodeMatcher(instructions)
 
-			.MatchForward(false, 
-				new(OpCodes.Ldarg_0),
-				new(OpCodes.Ldloc_2),
-				new(CodeInstruction.LoadField(typeof(LevelBuilder), "ld")),
-				new(CodeInstruction.LoadField(typeof(LevelObject), "exitCount"))
-			)
-			.InsertAndAdvance(Transpilers.EmitDelegate(() =>
+			List<Cell> reconnectionCells = [];
+
+			foreach (var tile in builder.Ec.mainHall.GetNewTileList())
 			{
-				if (ChaosMode != BasePlugin.ChaosMode.RoomChaos)
-					return;
-				
-				foreach (var cell in i.Ec.cells)
+				if (!tile.offLimits)
 				{
-					if (cell.room.type == RoomType.Hall)
-						i.Ec.DestroyCell(cell);
-				}
-				const int hallLength = 12;
-				IntVector2 realMid = new(i.levelSize.x / 2, i.levelSize.z / 2 - hallLength / 2);
-				TryCreateCell(12, realMid + new IntVector2(0, 1));
-				IntVector2 pos = realMid + new IntVector2(0, 2);
-
-				for (int y = 0; y < hallLength; y++)
-				{
-					TryCreateCell(10, pos);
-					pos.z++;
+					if (IsInBorder(tile.position))
+						builder.Ec.DestroyCell(tile);
+					else if (tile.TileMatches(i.Ec.mainHall)) // feels useless, but it makes ElevatorsInSpecialRoom work properly
+						reconnectionCells.Add(tile);
 				}
 
-				TryCreateCell(9, pos);
-				pos.x++;
-
-				for (int y = 0; y < hallLength; y++)
-				{
-					TryCreateCell(5, pos);
-					pos.x++;
-				}
-
-				TryCreateCell(3, pos);
-				pos.z--;
-				for (int y = 0; y < hallLength; y++)
-				{
-					TryCreateCell(10, pos);
-					pos.z--;
-				}
+			}
 
 
-				TryCreateCell(6, pos);
-				pos.x--;
+			builder.Ec.mainHall.size = builder.levelSize;
+			builder.Ec.mainHall.maxSize = builder.levelSize;
 
-				for (int y = 0; y < hallLength; y++)
-				{
-					TryCreateCell(5, pos);
-					pos.x--;
-				}
-
-				static void TryCreateCell(int tileBin, IntVector2 pos)
-				{
-					if (i.Ec.CellFromPosition(pos).Null)
-						i.Ec.CreateCell(tileBin, pos, i.Ec.mainHall);
-				}
-				
-			}))
-
-
-			.MatchForward(false,
-				new(CodeInstruction.LoadField(typeof(RoomController), "forcedDoorPositions")),
-				new(OpCodes.Ldarg_0),
-				new(OpCodes.Ldfld, name: "<i>5__50"),
-				new(OpCodes.Callvirt, AccessTools.PropertyGetter(typeof(List<IntVector2>), "Item")),
-				new(OpCodes.Ldarg_0),
-				new(OpCodes.Ldfld, name: "<room>5__74"),
-				new(OpCodes.Ldc_I4_0),
-				new(OpCodes.Ldc_I4_1),
-				new(OpCodes.Ldloca_S, name: "V_87"),
-				new(OpCodes.Ldloca_S, name: "V_88"),
-				new(CodeInstruction.Call("LevelBuilder:BuildDoorIfPossible", [typeof(IntVector2), typeof(RoomController), typeof(bool), typeof(bool), typeof(RoomController).MakeByRefType(), typeof(IntVector2).MakeByRefType()]))
-				) // Get to this method
-
-			.Advance(-20) // Goes to right spot
-			.InsertAndAdvance(
-			Transpilers.EmitDelegate(() =>
+			for (int x = 0; x < builder.Ec.levelSize.x; x++) // Basically fill every single spot with a maze tile so the level doesn't break in a case a rare occurrance happen
 			{
-				if (!ModeClearsOutMap)
-					return;
-				
-
-				List<Cell> reconnectionCells = [];
-
-				foreach (var tile in i.Ec.mainHall.GetNewTileList())
+				for (int z = 0; z < builder.Ec.levelSize.z; z++)
 				{
-					if (!tile.offLimits)
-					{
-						if (IsInBorder(tile.position))
-							i.Ec.DestroyCell(tile);
-						else if (tile.TileMatches(i.Ec.mainHall)) // feels useless, but it makes ElevatorsInSpecialRoom work properly
-							reconnectionCells.Add(tile);
-					}
+					if (!builder.Ec.ContainsCoordinates(x, z) || !builder.Ec.CellFromPosition(x, z).Null || !IsInBorder(x, z)) continue;
+					builder.Ec.mainHall.position = new(x, z);
 
+					MazeGenerator.Generate(builder.Ec.mainHall, rng);
 				}
 
+			}
 
-				var rng = new System.Random(i.controlledRNG.Next());
-				i.Ec.mainHall.size = i.levelSize;
-				i.Ec.mainHall.maxSize = i.levelSize;
-
-				for (int x = 0; x < i.Ec.levelSize.x; x++) // Basically fill every single spot with a maze tile so the level doesn't break in a case a rare occurrance happen
+			foreach (var cell in reconnectionCells)
+			{
+				for (int i = 0; i < 4; i++)
 				{
-					for (int z = 0; z < i.Ec.levelSize.z; z++)
+					var dir = (Direction)i;
+					var nextPos = cell.position + dir.ToIntVector2();
+					if (builder.Ec.ContainsCoordinates(nextPos))
 					{
-						if (!i.Ec.ContainsCoordinates(x, z) || !i.Ec.CellFromPosition(x, z).Null || !IsInBorder(x, z)) continue;
-						i.Ec.mainHall.position = new(x, z);
-
-						MazeGenerator.Generate(i.Ec.mainHall, rng);
-					}
-
-				}
-
-				foreach (var cell in reconnectionCells)
-				{
-					for (int i = 0; i < 4; i++)
-					{
-						var dir = (Direction)i;
-						var nextPos = cell.position + dir.ToIntVector2();
-						if (MazeChaos.i.Ec.ContainsCoordinates(nextPos))
-						{
-							var nextCell = MazeChaos.i.Ec.CellFromPosition(nextPos);
-							if (nextCell.TileMatches(cell.room))
-								MazeChaos.i.Ec.ConnectCells(cell.position, dir);
-						}
+						var nextCell = builder.Ec.CellFromPosition(nextPos);
+						if (nextCell.TileMatches(cell.room))
+							builder.Ec.ConnectCells(cell.position, dir);
 					}
 				}
+			}
 
-				i.Ec.mainHall.position = new();
+			builder.Ec.mainHall.position = new();
 
-				foreach (var door in tripEntrances)
+			foreach (var door in tripEntrances)
+			{
+				var tile = builder.Ec.CellFromPosition(door.Key);
+				if (tile != null)
 				{
-					var tile = i.Ec.CellFromPosition(door.Key);
-					if (tile != null)
+					foreach (var dir in door.Value)
 					{
-						foreach (var dir in door.Value)
-						{
-							i.Ec.ConnectCells(door.Key, dir);
-							tile = i.Ec.CellFromPosition(door.Key);
-							tile.doorHere = true;
-							tile.doorDirs.Add(dir);
-							tile.doorDirsSpace.Add(dir); // Fix the issue with blocked off entrances
+						builder.Ec.ConnectCells(door.Key, dir);
+						tile = builder.Ec.CellFromPosition(door.Key);
+						tile.doorHere = true;
+						tile.doorDirs.Add(dir);
+						tile.doorDirsSpace.Add(dir); // Fix the issue with blocked off entrances
 
-							tile = i.Ec.CellFromPosition(door.Key + dir.ToIntVector2());
-							tile.doorHere = true;
-							tile.doorDirs.Add(dir.GetOpposite());
-							tile.doorDirsSpace.Add(dir.GetOpposite()); // Fix the issue with blocked off entrances
-						}
+						tile = builder.Ec.CellFromPosition(door.Key + dir.ToIntVector2());
+						tile.doorHere = true;
+						tile.doorDirs.Add(dir.GetOpposite());
+						tile.doorDirsSpace.Add(dir.GetOpposite()); // Fix the issue with blocked off entrances
 					}
 				}
+			}
 
-				tripEntrances.Clear(); // Done
-			}))
-			.InstructionEnumeration();
-		
+			tripEntrances.Clear(); // Done
+		}
+
 		static bool ModeClearsOutMap =>
 			ChaosMode == BasePlugin.ChaosMode.MazeChaos || ChaosMode == BasePlugin.ChaosMode.HallChaos;
 		static LevelGenerator i;
+		static bool afterAllRoomsCalled = false;
 
 		internal static Dictionary<IntVector2, Direction[]> tripEntrances = [];
 
@@ -212,6 +131,8 @@ namespace BBSchoolMaze.Patches
 	}
 
 
+
+
 	[HarmonyPatch(typeof(BaseGameManager), "Initialize")]
 	internal class NocheatJustfullmap
 	{
@@ -224,7 +145,7 @@ namespace BBSchoolMaze.Patches
 	}
 
 	[HarmonyPatch(typeof(LevelBuilder))]
-	internal class MakeElevatorVisible
+	internal class MakeEntrancesVisible
 	{
 		[HarmonyPatch("CreateElevator")]
 		[HarmonyPostfix]

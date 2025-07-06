@@ -1,6 +1,6 @@
-﻿using BBSchoolMaze.Patches;
+﻿using System.Collections.Generic;
+using BBSchoolMaze.Patches;
 using BBSchoolMaze.Plugin;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace BBSchoolMaze
