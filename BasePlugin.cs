@@ -161,6 +161,12 @@ namespace BBSchoolMaze.Plugin
 					index++;
 				}
 
+				roomChaosScene.levelObject.minSize = new(5, 5);
+				roomChaosScene.levelObject.maxSize = new(10, 10);
+				roomChaosScene.levelObject.minPlots = 1;
+				roomChaosScene.levelObject.maxPlots = 1;
+				roomChaosScene.levelObject.minPlotSize = 0;
+
 				roomChaosScene.levelObject.includeBuffers = false;
 				roomChaosScene.levelObject.fillEmptySpace = false;
 				roomChaosScene.levelObject.exitCount = 1;
@@ -228,16 +234,14 @@ namespace BBSchoolMaze.Plugin
 				allAtOnceChaosScene.levelObject.timeBonusVal *= 2;
 				allAtOnceChaosScene.levelObject.timeLimit *= 4f;
 				allAtOnceChaosScene.levelObject.maxItemValue *= 4;
-				allAtOnceChaosScene.levelObject.maxSize = new IntVector2(8, 8);
-				allAtOnceChaosScene.levelObject.minSize = new IntVector2(5, 5);
-				allAtOnceChaosScene.levelObject.outerEdgeBuffer += 3 * allAtOnceChaosScene.levelObject.roomGroup.Length;
+				allAtOnceChaosScene.levelObject.maxSize += new IntVector2(15, 11);
+				allAtOnceChaosScene.levelObject.minSize += new IntVector2(7, 9);
+				allAtOnceChaosScene.levelObject.outerEdgeBuffer += 2 * allAtOnceChaosScene.levelObject.roomGroup.Length;
 				allAtOnceChaosScene.levelObject.includeBuffers = false;
 				allAtOnceChaosScene.levelObject.fillEmptySpace = false;
 				allAtOnceChaosScene.levelObject.exitCount = 1;
 				allAtOnceChaosScene.levelObject.forcedItems.Clear();
-				allAtOnceChaosScene.levelObject.minPlots = 1;
-				allAtOnceChaosScene.levelObject.maxPlots = 1;
-				allAtOnceChaosScene.levelObject.minPlotSize = 0;
+
 
 				allAtOnceChaosScene.levelObject.standardLightColor = new(0.95f, 0.64f, 0.69f);
 				// Adds all the forced structures from other levels
